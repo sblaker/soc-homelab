@@ -1,0 +1,59 @@
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+*.p12
+
+# Wazuh runtime data (generated, not tracked)
+wazuh/data/
+wazuh/logs/
+wazuh/queue/
+wazuh/var/
+
+# Docker volumes (if exported locally)
+*.tar.gz
+*.tar
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Node (if any tooling is added)
+node_modules/
+npm-debug.log*
+
+# Large binary / capture files
+*.pcap
+*.pcapng
+*.evtx
+*.vmdk
+*.vdi
+*.ova
+*.iso
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak

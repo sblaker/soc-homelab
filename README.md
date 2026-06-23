@@ -1,0 +1,233 @@
+# SOC Home Lab
+
+![Wazuh](https://img.shields.io/badge/SIEM-Wazuh_4.9-blue?logo=wazuh)
+![MITRE ATT&CK](https://img.shields.io/badge/Framework-MITRE_ATT%26CK-red)
+![Docker](https://img.shields.io/badge/Stack-Docker_Compose-2496ED?logo=docker)
+![Platform](https://img.shields.io/badge/Platform-Windows_11_Host-0078D4?logo=windows)
+![Status](https://img.shields.io/badge/Status-In_Progress-yellow)
+
+A realistic SOC home lab built to demonstrate L1 Security Analyst skills: SIEM operations, detection engineering, alert triage, and MITRE ATT&CK-mapped incident documentation.
+
+Built as a portfolio piece targeting Blue Team / Cybersecurity Analyst roles.
+
+---
+
+## Architecture
+
+```
+Host — Windows 11 (i5-1135G7 · 16 GB RAM)
+│
+├── Docker Desktop
+│   └── Wazuh Stack (docker-compose)
+│       ├── wazuh-manager     ← receives agent events, applies rules
+│       ├── wazuh-indexer     ← OpenSearch, stores alerts
+│       └── wazuh-dashboard   ← https://localhost (browser on host)
+│
+├── VirtualBox
+│   ├── target-linux          Ubuntu Server 22.04 · 1.5 GB RAM · Wazuh Agent
+│   └── target-windows        Windows 10 Eval · 3 GB RAM · Wazuh Agent + Sysmon
+│
+└── Browser (host) → Wazuh Dashboard → Alert triage → Write-up
+
+Event flow:
+  VM activity → Wazuh Agent → Manager (rules engine) → Indexer → Dashboard → Write-up
+```
+
+Full diagram and networking details: [docs/architecture.md](docs/architecture.md)
+
+---
+
+## Stack
+
+| Component | Technology | Notes |
+|---|---|---|
+| SIEM | **Wazuh 4.9** | Docker Compose, single-node |
+| Linux target | Ubuntu Server 22.04 | CLI only, Wazuh Agent |
+| Windows target | Windows 10 Evaluation | Wazuh Agent + Sysmon (SwiftOnSecurity) |
+| Attack simulation | **Atomic Red Team** | MITRE-mapped test cases |
+| Detection rules | Custom Wazuh XML | ID range 100001–100099 |
+| Endpoint telemetry | **Sysmon** | Event ID 1, 3, 7, 11, 13, 22 |
+| Write-ups | Markdown | Per-detection, MITRE-mapped |
+
+---
+
+## Detection Coverage
+
+| ID | Detection | MITRE Technique | Tactic | Severity | Status |
+|---|---|---|---|---|---|
+| [DET-001](detections/DET-001_ssh-brute-force.md) | SSH Brute Force | T1110.001 | Credential Access | High | ✅ |
+| [DET-002](detections/DET-002_powershell-suspicious.md) | Suspicious PowerShell | T1059.001 | Execution | High | ✅ |
+| DET-003 | Scheduled Task Persistence | T1053.005 | Persistence | High | 🔄 |
+| DET-004 | Registry Run Key Persistence | T1547.001 | Persistence | High | 🔄 |
+| DET-005 | SMB / PsExec Lateral Movement | T1021.002 | Lateral Movement | High | 🔄 |
+| DET-006 | LSASS Memory Access | T1003.001 | Credential Access | Critical | 🔄 |
+| DET-007 | Office → Child Process Spawn | T1566.001 | Initial Access | Critical | 🔄 |
+
+### MITRE ATT&CK Coverage Map
+
+| Tactic | Techniques Covered |
+|---|---|
+| Credential Access | T1110, T1110.001, T1110.003, T1003, T1003.001 |
+| Execution | T1059, T1059.001, T1059.003, T1053, T1053.005 |
+| Persistence | T1547, T1547.001, T1053, T1053.003 |
+| Lateral Movement | T1021, T1021.001, T1021.002, T1021.004 |
+| Defense Evasion | T1027, T1218, T1562, T1562.001, T1562.002 |
+| Initial Access | T1566, T1566.001 |
+| Command & Control | T1071, T1071.004, T1568 |
+
+---
+
+## Custom Detection Rules
+
+Rules are in [`wazuh/rules/`](wazuh/rules/) and loaded into the Wazuh Manager via Docker volume mount.
+
+| File | Coverage | Rule IDs |
+|---|---|---|
+| [custom_ssh.xml](wazuh/rules/custom_ssh.xml) | SSH brute force, user enumeration, sudo abuse | 100001–100006 |
+| [custom_windows.xml](wazuh/rules/custom_windows.xml) | Sysmon-based: process injection, registry, file drops, LSASS | 100020–100028 |
+| [custom_mitre_mapped.xml](wazuh/rules/custom_mitre_mapped.xml) | Full MITRE tag coverage: T1110, T1059, T1053, T1547, T1021, T1562 | 100060–100096 |
+
+---
+
+## Attack Simulations
+
+Playbooks in [`atomic-red-team/playbooks/`](atomic-red-team/playbooks/) — each includes exact commands, expected Wazuh alert, and cleanup procedure.
+
+| Playbook | Technique | Platform |
+|---|---|---|
+| [T1110-001 SSH Brute Force](atomic-red-team/playbooks/T1110-001_ssh-brute-force.md) | T1110.001 | Linux |
+| [T1059-001 PowerShell](atomic-red-team/playbooks/T1059-001_powershell-suspicious.md) | T1059.001 | Windows |
+| [T1053-005 Scheduled Task](atomic-red-team/playbooks/T1053-005_scheduled-task.md) | T1053.005 | Windows |
+| [T1547-001 Registry Run Key](atomic-red-team/playbooks/T1547-001_registry-run-key.md) | T1547.001 | Windows |
+| [T1021-002 SMB/PsExec](atomic-red-team/playbooks/T1021-002_smb-psexec.md) | T1021.002 | Windows |
+
+---
+
+## Screenshots
+
+<!-- Screenshots will be added after lab validation -->
+<!-- Planned: Dashboard overview · Alert detail · Detection coverage map · Custom rule firing -->
+
+---
+
+## Quick Start (Replication Guide)
+
+> Full step-by-step guides in Italian are in [`docs/`](docs/).
+
+### Prerequisites
+
+- Windows 10/11 host, 16 GB RAM minimum
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) with WSL 2
+- [VirtualBox](https://www.virtualbox.org/)
+- Ubuntu Server 22.04 ISO + Windows 10 Evaluation ISO
+
+### Steps
+
+**1 — Start Wazuh (Docker)**
+
+```powershell
+cd wazuh
+docker compose -f generate-indexer-certs.yml run --rm generator
+docker compose up -d
+# Dashboard → https://localhost  (admin / SecretPassword)
+```
+
+Guide: [docs/docker-setup.md](docs/docker-setup.md)
+
+**2 — Create VMs (VirtualBox)**
+
+- `target-linux`: Ubuntu Server 22.04, 1.5 GB RAM, NAT + Host-only adapter
+- `target-windows`: Windows 10 Eval, 3 GB RAM, NAT + Host-only adapter
+
+Guide: [docs/vm-setup.md](docs/vm-setup.md)
+
+**3 — Enroll Wazuh Agents**
+
+Both VMs point to `192.168.56.1` (host IP on the host-only network, where Docker runs).
+
+```bash
+# target-linux
+sudo WAZUH_MANAGER='192.168.56.1' apt install wazuh-agent -y
+sudo systemctl enable --now wazuh-agent
+```
+
+Guide: [docs/agents-setup.md](docs/agents-setup.md)
+
+**4 — Install Sysmon (Windows target)**
+
+```powershell
+# target-windows (admin PowerShell)
+.\Sysmon64.exe -accepteula -i sysmonconfig.xml
+```
+
+Guide: [docs/sysmon-setup.md](docs/sysmon-setup.md)
+
+**5 — Load custom rules**
+
+Rules in `wazuh/rules/` are auto-mounted into the Manager container via the volume defined in `wazuh/docker-compose.yml`. Restart the manager after any rule change:
+
+```powershell
+docker compose restart wazuh.manager
+```
+
+**6 — Run a simulation and verify detection**
+
+```bash
+# target-linux — trigger SSH brute force detection
+for i in {1..6}; do
+  sshpass -p "wrong${i}" ssh -o StrictHostKeyChecking=no labuser@127.0.0.1 2>/dev/null
+done
+```
+
+Then check Wazuh Dashboard: **Security Events** → filter `rule.id: 100001`
+
+---
+
+## Repository Structure
+
+```
+soc-homelab/
+├── docs/                         # Setup guides (Italian)
+│   ├── architecture.md
+│   ├── docker-setup.md
+│   ├── vm-setup.md
+│   ├── agents-setup.md
+│   └── sysmon-setup.md
+├── wazuh/
+│   ├── docker-compose.yml        # Wazuh 4.9 single-node + custom rules mount
+│   ├── rules/
+│   │   ├── custom_ssh.xml        # SSH detection rules
+│   │   ├── custom_windows.xml    # Sysmon-based Windows rules
+│   │   └── custom_mitre_mapped.xml
+│   └── decoders/                 # Custom decoders (if needed)
+├── sysmon/
+│   └── sysmon-config.xml         # SwiftOnSecurity config (add manually)
+├── atomic-red-team/
+│   └── playbooks/                # Attack simulation guides
+├── detections/
+│   ├── README.md                 # Coverage index + template
+│   ├── DET-001_ssh-brute-force.md
+│   └── DET-002_powershell-suspicious.md
+└── screenshots/
+```
+
+---
+
+## Resource Budget
+
+| Component | Type | RAM |
+|---|---|---|
+| Wazuh stack | Docker | ~3.5–4 GB |
+| target-linux | VirtualBox | 1.5 GB |
+| target-windows | VirtualBox | 3 GB |
+| Host headroom | — | ~7–8 GB |
+| **Total** | | **~8.5 GB** |
+
+> Run only one VM at a time when possible — saves 1.5–3 GB.
+
+---
+
+## Author
+
+Portfolio project — Blue Team / SOC Analyst L1  
+[GitHub](https://github.com/) · [LinkedIn](https://linkedin.com/)

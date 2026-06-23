@@ -1,0 +1,119 @@
+<!-- =============================================================================
+  custom_ssh.xml — Regole custom per detection SSH
+  ID range: 100001 – 100019
+  Autore: SOC Home Lab
+  MITRE coverage: T1110 (Brute Force), T1078 (Valid Accounts), T1021.004 (SSH)
+
+  Come caricare:
+    Le regole vengono montate automaticamente in /var/ossec/etc/rules/custom_lab/
+    tramite il volume mount in docker-compose.yml.
+    Riavviare il manager dopo ogni modifica:
+      docker compose restart wazuh.manager
+============================================================================= -->
+
+<group name="custom_ssh,authentication,">
+
+  <!-- =========================================================
+    REGOLA 100001 — SSH Brute Force da stesso IP
+    Trigger: più di 5 auth failure dallo stesso IP in 60 secondi
+    Parent rule: 5760 (sshd: authentication failed)
+    Severity: 10 (High)
+  ========================================================= -->
+  <rule id="100001" level="10" frequency="5" timeframe="60">
+    <if_matched_sid>5760</if_matched_sid>
+    <same_source_ip />
+    <description>SSH Brute Force: 5+ authentication failures from $(srcip) in 60 seconds</description>
+    <mitre>
+      <id>T1110</id>
+      <id>T1110.001</id>
+    </mitre>
+    <group>authentication_failures,pci_dss_10.2.4,pci_dss_10.2.5,gdpr_IV_35.7.d,</group>
+  </rule>
+
+  <!-- =========================================================
+    REGOLA 100002 — SSH Brute Force ad alta intensità
+    Trigger: più di 10 auth failure dallo stesso IP in 60 secondi
+    Parent: 100001 (già un brute force) — escalation di severity
+    Severity: 14 (Critical)
+  ========================================================= -->
+  <rule id="100002" level="14" frequency="10" timeframe="60">
+    <if_matched_sid>5760</if_matched_sid>
+    <same_source_ip />
+    <description>SSH Brute Force HIGH RATE: 10+ authentication failures from $(srcip) in 60 seconds</description>
+    <mitre>
+      <id>T1110</id>
+      <id>T1110.001</id>
+    </mitre>
+    <group>authentication_failures,pci_dss_10.2.4,pci_dss_10.2.5,</group>
+  </rule>
+
+  <!-- =========================================================
+    REGOLA 100003 — Brute force SSH su account root
+    Trigger: auth failure su utente root via SSH
+    Parent: 5760
+    Severity: 10 (High) — root è target privilegiato
+  ========================================================= -->
+  <rule id="100003" level="10">
+    <if_sid>5760</if_sid>
+    <match>invalid user root|Failed password for root</match>
+    <description>SSH authentication failure for root account from $(srcip)</description>
+    <mitre>
+      <id>T1110</id>
+      <id>T1110.001</id>
+      <id>T1078.003</id>
+    </mitre>
+    <group>authentication_failures,</group>
+  </rule>
+
+  <!-- =========================================================
+    REGOLA 100004 — Sudo: più fallimenti dallo stesso utente
+    Trigger: 3+ sudo failure dello stesso utente in 120 secondi
+    Parent: 5402 (PAM: authentication failure per sudo)
+    Severity: 10 (High) — possibile privilege escalation attempt
+  ========================================================= -->
+  <rule id="100004" level="10" frequency="3" timeframe="120">
+    <if_matched_sid>5402</if_matched_sid>
+    <same_user />
+    <description>Multiple sudo failures for user $(dstuser) - possible privilege escalation attempt</description>
+    <mitre>
+      <id>T1078</id>
+      <id>T1548.003</id>
+    </mitre>
+    <group>authentication_failures,privilege_escalation,</group>
+  </rule>
+
+  <!-- =========================================================
+    REGOLA 100005 — SSH login da utente non-standard
+    Trigger: login SSH riuscito per utente diverso da quelli comuni
+    Parent: 5715 (sshd: authentication success)
+    Nota: adatta il <match> agli utenti legittimi del tuo lab
+    Severity: 6 (Medium) — anomalia, non necessariamente malevola
+  ========================================================= -->
+  <rule id="100005" level="6">
+    <if_sid>5715</if_sid>
+    <description>SSH successful login for user $(dstuser) from $(srcip) - verify if expected</description>
+    <mitre>
+      <id>T1078</id>
+      <id>T1021.004</id>
+    </mitre>
+    <group>authentication_success,</group>
+  </rule>
+
+  <!-- =========================================================
+    REGOLA 100006 — SSH scan: tentativi su utenti inesistenti
+    Trigger: auth failure per "invalid user" (utente non esistente)
+    Parent: 5710 (sshd: attempt to login with invalid user)
+    Severity: 8 (High) — tipico comportamento di scanner/bruteforcer
+  ========================================================= -->
+  <rule id="100006" level="8" frequency="4" timeframe="30">
+    <if_matched_sid>5710</if_matched_sid>
+    <same_source_ip />
+    <description>SSH user enumeration scan from $(srcip): multiple invalid user attempts</description>
+    <mitre>
+      <id>T1110</id>
+      <id>T1110.003</id>
+    </mitre>
+    <group>authentication_failures,reconnaissance,</group>
+  </rule>
+
+</group>

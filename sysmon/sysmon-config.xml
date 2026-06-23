@@ -1,0 +1,20 @@
+<!--
+  Sysmon Config — SwiftOnSecurity
+  Source: https://github.com/SwiftOnSecurity/sysmon-config
+  File:   sysmonconfig-export.xml
+
+  ISTRUZIONI:
+    Scarica la versione aggiornata direttamente da GitHub prima di installare:
+
+    Invoke-WebRequest `
+      -Uri "https://raw.githubusercontent.com/SwiftOnSecurity/sysmon-config/master/sysmonconfig-export.xml" `
+      -OutFile "sysmonconfig.xml"
+
+    Poi installa:
+      .\Sysmon64.exe -accepteula -i sysmonconfig.xml
+
+  Non committare la config completa nel repo se è molto grande (>500 KB).
+  Questo file è un placeholder — la config reale va scaricata dalla source ufficiale.
+
+  Vedi docs/sysmon-setup.md per le istruzioni complete.
+-->
