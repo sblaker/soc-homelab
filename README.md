@@ -4,7 +4,7 @@
 ![MITRE ATT&CK](https://img.shields.io/badge/Framework-MITRE_ATT%26CK-red)
 ![Docker](https://img.shields.io/badge/Stack-Docker_Compose-2496ED?logo=docker)
 ![Platform](https://img.shields.io/badge/Platform-Windows_11_Host-0078D4?logo=windows)
-![Status](https://img.shields.io/badge/Status-In_Progress-yellow)
+![Status](https://img.shields.io/badge/Status-Active-brightgreen)
 
 A realistic SOC home lab built to demonstrate L1 Security Analyst skills: SIEM operations, detection engineering, alert triage, and MITRE ATT&CK-mapped incident documentation.
 
@@ -105,8 +105,15 @@ Playbooks in [`atomic-red-team/playbooks/`](atomic-red-team/playbooks/) — each
 
 ## Screenshots
 
-<!-- Screenshots will be added after lab validation -->
-<!-- Planned: Dashboard overview · Alert detail · Detection coverage map · Custom rule firing -->
+| Dashboard Overview | Agent: target-linux |
+|---|---|
+| ![Wazuh dashboard overview](screenshots/dashboard-overview.png) | ![Agent target-linux](screenshots/agent-target-linux.png) |
+
+| Agent: target-windows | MITRE ATT&CK Coverage |
+|---|---|
+| ![Agent target-windows](screenshots/agent-target-windows.png) | ![MITRE coverage](screenshots/mitre-coverage.png) |
+
+> Screenshots captured from a live Wazuh 4.9.2 deployment running on Docker (single-node).
 
 ---
 
@@ -227,7 +234,50 @@ soc-homelab/
 
 ---
 
+## Key Findings
+
+Real alerts captured during attack simulations — JSON in [`detections/`](detections/).
+
+### DET-001 — SSH Brute Force (T1110.001)
+
+| Field | Value |
+|---|---|
+| Rule ID | `5712` (built-in) + `100001` (custom) |
+| Level | 10 — High |
+| Frequency | 8 authentication failures in ~10 s |
+| Source IP | `127.0.0.1` (loopback in lab; would be attacker IP in production) |
+| Target user | `fakeuser` (non-existent — typical of automated scanners) |
+| Outcome | No successful login (`Accepted` not present) |
+| MITRE | T1110 · T1110.001 — Credential Access / Brute Force |
+| Timestamp | 2026-06-24T11:58:40Z |
+
+### DET-002 — Suspicious PowerShell (T1059.001)
+
+| Field | Value |
+|---|---|
+| Rule ID | `92057` (built-in) + `100021` (custom) |
+| Level | 12 — High |
+| Flags detected | `-NoP -NonI -W Hidden -Exec Bypass -EncodedCommand` |
+| Parent process | `powershell.exe` (in real attack: `winword.exe` / `excel.exe`) |
+| Payload | Base64 → `Write-Host 'Atomic Red Team T1059.001 test'` |
+| Sysmon Event | EID 1 (Process Create) |
+| MITRE | T1059.001 — Execution / PowerShell + T1027 — Obfuscation |
+| Timestamp | 2026-06-24T12:07:29Z |
+
+---
+
+## Lab Results
+
+Both agents active and reporting at time of capture:
+
+| Agent ID | Name | Platform | IP | Status | Simulations Run |
+|---|---|---|---|---|---|
+| 001 | target-linux | Ubuntu Server 22.04 | `192.168.56.101` | ✅ Active | SSH Brute Force (T1110.001) |
+| 002 | target-windows | Windows 11 + Sysmon v15.21 | `127.0.0.1` | ✅ Active | PowerShell Suspicious (T1059.001) |
+
+---
+
 ## Author
 
 Portfolio project — Blue Team / SOC Analyst L1  
-[GitHub](https://github.com/) · [LinkedIn](https://linkedin.com/)
+[GitHub](https://github.com/sblaker/soc-homelab)

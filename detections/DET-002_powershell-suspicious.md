@@ -24,13 +24,11 @@ Rileva l'esecuzione di PowerShell con flag tipici di utilizzo offensivo: `-Encod
 Comandi usati:
 
 ```powershell
-# Test 1 — Encoded Command
-$cmd = 'Write-Host "Atomic Red Team Test T1059.001"'
-$encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($cmd))
-powershell.exe -NoProfile -NonInteractive -EncodedCommand $encoded
-
-# Test 2 — Execution Policy Bypass + IEX
-powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "IEX 'Write-Host test'"
+# EncodedCommand + NoProfile + Hidden + Bypass (pattern offensivo completo)
+$encoded = [Convert]::ToBase64String(
+    [System.Text.Encoding]::Unicode.GetBytes("Write-Host 'Atomic Red Team T1059.001 test'")
+)
+Start-Process powershell.exe -ArgumentList "-NoP -NonI -W Hidden -Exec Bypass -EncodedCommand $encoded" -Wait
 ```
 
 ---
@@ -38,16 +36,65 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "
 ## Alert generato da Wazuh
 
 ```json
-[inserire dal lab]
+{
+  "timestamp": "2026-06-24T12:07:29.560+0000",
+  "rule": {
+    "level": 12,
+    "description": "Powershell.exe spawned a powershell process which executed a base64 encoded command",
+    "id": "92057",
+    "mitre": {
+      "id": ["T1059.001"],
+      "tactic": ["Execution"],
+      "technique": ["PowerShell"]
+    },
+    "firedtimes": 1,
+    "mail": true,
+    "groups": ["sysmon", "sysmon_eid1_detections", "windows"]
+  },
+  "agent": {
+    "id": "002",
+    "name": "target-windows",
+    "ip": "127.0.0.1"
+  },
+  "manager": { "name": "wazuh.manager" },
+  "id": "1782302849.3161471",
+  "decoder": { "name": "windows_eventchannel" },
+  "data": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Sysmon",
+        "eventID": "1",
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "computer": "Matebook"
+      },
+      "eventdata": {
+        "utcTime": "2026-06-24 12:07:28.149",
+        "processId": "30836",
+        "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "commandLine": "\"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -NoP -NonI -W Hidden -Exec Bypass -EncodedCommand VwByAGkAdABlAC0ASABvAHMAdAAgACcAQQB0AG8AbQBpAGMAIABSAGUAZAAgAFQAZQBhAG0AIABUADEAMAA1ADkALgAwADAAMQAgAHQAZQBzAHQAJwA=",
+        "user": "Matebook\\antol",
+        "integrityLevel": "Medium",
+        "hashes": "MD5=A97E6573B97B44C96122BFA543A82EA1,SHA256=0FF6F2C94BC7E2833A5F7E16DE1622E5DBA70396F31C7D5F56381870317E8C46",
+        "parentImage": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+      }
+    }
+  },
+  "location": "EventChannel"
+}
 ```
 
-> Campi attesi: `rule.id: 100021`, `rule.level: 12`, `data.win.eventdata.image`, `data.win.eventdata.commandLine`, `rule.mitre.technique: ["T1059.001", "T1027"]`
+> Payload Base64 decodificato: `Write-Host 'Atomic Red Team T1059.001 test'` — in un attacco reale conterrebbe shellcode, download o esecuzione di stager C2.
 
 ---
 
 ## Analisi e triage
 
-[inserire dal lab]
+- **Process**: `powershell.exe` (PID 30836)
+- **Flag rilevati**: `-NoP` `-NonI` `-W Hidden` `-Exec Bypass` `-EncodedCommand` — combinazione ad alto rischio
+- **Parent process**: `powershell.exe` — in un attacco reale spesso è `winword.exe`, `excel.exe`, `mshta.exe`
+- **User**: `Matebook\antol` — account standard (non SYSTEM)
+- **Payload decodificato**: benigno nel test, ma la struttura è identica a un dropper reale
+- **Network post-exec**: nessuna connessione uscente rilevata (payload inerte)
 
 Domande guida per il triage:
 - Qual è il parent process? (campo `data.win.eventdata.parentImage`)
@@ -90,12 +137,12 @@ Domande guida per il triage:
 | Tipo | Valore | Note |
 |---|---|---|
 | Process | `powershell.exe` | |
-| Parent process | `[inserire dal lab]` | Se Office app → TP quasi certo |
-| Command line | `[inserire dal lab]` | Flag specifici rilevati |
-| Hash processo | `[inserire dal lab]` | SHA256 da Sysmon |
-| User | `[inserire dal lab]` | Account che ha lanciato il processo |
-| Timestamp | `[inserire dal lab]` | |
-| Network conn post-exec | `[inserire dal lab]` | IP/porta se presente (Sysmon EID 3) |
+| Parent process | `powershell.exe` | In attacco reale: `winword.exe`/`excel.exe` = TP |
+| Command line | `-NoP -NonI -W Hidden -Exec Bypass -EncodedCommand` | 5 flag offensivi simultanei |
+| Hash processo | `SHA256=0FF6F2C94BC7E2833A5F7E16DE1622E5DBA70396F31C7D5F56381870317E8C46` | Da Sysmon EID 1 |
+| User | `Matebook\antol` | Account standard — non SYSTEM |
+| Timestamp | `2026-06-24T12:07:28.149Z` | |
+| Network conn post-exec | Nessuna | Payload inerte (lab test) |
 
 ---
 

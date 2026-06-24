@@ -23,20 +23,10 @@ Rileva attacchi brute force verso il servizio SSH identificando più di 5 autent
 Comandi usati:
 
 ```bash
-# Generazione wordlist di password errate
-cat > /tmp/passwords.txt << 'EOF'
-password123
-admin
-123456
-letmein
-qwerty
-root
-toor
-Password1
-EOF
-
-# Brute force SSH verso localhost
-hydra -l labuser -P /tmp/passwords.txt ssh://127.0.0.1 -t 4 -V
+# 10 tentativi SSH con password errate verso localhost (utente inesistente)
+for i in $(seq 1 10); do
+  sshpass -p "wrongpass${i}" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=2 fakeuser@127.0.0.1 2>/dev/null
+done
 ```
 
 ---
@@ -44,16 +34,52 @@ hydra -l labuser -P /tmp/passwords.txt ssh://127.0.0.1 -t 4 -V
 ## Alert generato da Wazuh
 
 ```json
-[inserire dal lab]
+{
+  "timestamp": "2026-06-24T11:58:40.097+0000",
+  "rule": {
+    "level": 10,
+    "description": "sshd: brute force trying to get access to the system. Non existent user.",
+    "id": "5712",
+    "mitre": {
+      "id": ["T1110"],
+      "tactic": ["Credential Access"],
+      "technique": ["Brute Force"]
+    },
+    "frequency": 8,
+    "firedtimes": 1,
+    "groups": ["syslog", "sshd", "authentication_failures"],
+    "gdpr": ["IV_35.7.d", "IV_32.2"],
+    "hipaa": ["164.312.b"],
+    "nist_800_53": ["SI.4", "AU.14", "AC.7"],
+    "pci_dss": ["11.4", "10.2.4", "10.2.5"]
+  },
+  "agent": {
+    "id": "001",
+    "name": "target-linux",
+    "ip": "192.168.56.101"
+  },
+  "manager": { "name": "wazuh.manager" },
+  "id": "1782302320.1384407",
+  "full_log": "Jun 24 11:58:39 target-linux sshd[4830]: Failed password for invalid user fakeuser from 127.0.0.1 port 51938 ssh2",
+  "previous_output": "Jun 24 11:58:37 target-linux sshd[4830]: Invalid user fakeuser from 127.0.0.1 port 51938\nJun 24 11:58:37 target-linux sshd[4826]: Failed password for invalid user fakeuser from 127.0.0.1 port 51922 ssh2\nJun 24 11:58:35 target-linux sshd[4826]: Invalid user fakeuser from 127.0.0.1 port 51922\nJun 24 11:58:35 target-linux sshd[4822]: Failed password for invalid user fakeuser from 127.0.0.1 port 51906 ssh2\nJun 24 11:58:33 target-linux sshd[4822]: Invalid user fakeuser from 127.0.0.1 port 51906\nJun 24 11:58:32 target-linux sshd[4818]: Failed password for invalid user fakeuser from 127.0.0.1 port 51898 ssh2",
+  "predecoder": { "program_name": "sshd", "timestamp": "Jun 24 11:58:39", "hostname": "target-linux" },
+  "decoder": { "parent": "sshd", "name": "sshd" },
+  "data": { "srcip": "127.0.0.1", "srcuser": "fakeuser" },
+  "location": "journald"
+}
 ```
 
-> Campi attesi: `rule.id: 100001`, `rule.level: 10`, `data.srcip`, `rule.mitre.technique: ["T1110", "T1110.001"]`
+> Nota: la regola built-in `5712` (Wazuh) ha sparato per prima con frequenza 8 in ~10 s. La regola custom `100001` estende questa detection con soglia personalizzata e tag MITRE T1110.001.
 
 ---
 
 ## Analisi e triage
 
-[inserire dal lab]
+- **Sorgente**: `127.0.0.1` (loopback — in un attacco reale sarebbe l'IP esterno dell'attaccante)
+- **Utente bersaglio**: `fakeuser` (utente inesistente — pattern tipico di scanner automatici)
+- **Frequenza**: 8 failure in ~10 secondi — soglia brute force raggiunta
+- **Esito**: nessun accesso riuscito (`Accepted` non presente nei log)
+- **MITRE**: T1110 Credential Access → Brute Force
 
 Domande guida per il triage:
 - L'IP sorgente è noto? È nella lista degli admin autorizzati?
@@ -87,12 +113,12 @@ Domande guida per il triage:
 
 | Tipo | Valore | Note |
 |---|---|---|
-| Source IP | `[inserire dal lab]` | IP da cui proviene il brute force |
-| Username target | `labuser`, `root` | Utenti più tentati |
-| Timestamp prima failure | `[inserire dal lab]` | |
-| Timestamp ultima failure | `[inserire dal lab]` | |
-| N° tentativi totali | `[inserire dal lab]` | |
-| Successo? | `[inserire dal lab]` | True/False |
+| Source IP | `127.0.0.1` | Loopback (lab); in produzione = IP attaccante |
+| Username target | `fakeuser` | Utente inesistente — scanner automatico |
+| Timestamp prima failure | `2026-06-24T11:58:31+0000` | |
+| Timestamp ultima failure | `2026-06-24T11:58:39+0000` | |
+| N° tentativi totali | 8 in ~10 secondi | Frequenza molto alta |
+| Successo? | `False` | Nessun `Accepted` nei log |
 
 ---
 

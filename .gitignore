@@ -57,3 +57,14 @@ logs/
 # Temporary files
 *.tmp
 *.bak
+
+# Claude Code internals
+.claude/
+
+# Docker zip pesante (si scarica dal repo ufficiale Wazuh)
+wazuh/wazuh-docker.zip
+wazuh/wazuh-docker-4.9.2/
+
+# Script temporanei di setup
+publish-github.ps1
+take-screenshots.ps1
