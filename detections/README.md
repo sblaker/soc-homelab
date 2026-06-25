@@ -2,6 +2,10 @@
 
 Ogni detection è documentata con: simulazione dell'attacco, alert catturato dal lab, analisi triage, regola Wazuh usata, IOC e remediation.
 
+> 📑 **Report dei casi studio**: [CASE-STUDIES.md](CASE-STUDIES.md) — report in stile SOC che
+> raccoglie 6 casi studio (brute force, PowerShell, LSASS/Mimikatz, ransomware, persistenza, kill
+> chain) con contesto della minaccia, logica di detection, triage e remediation.
+
 ---
 
 ## Indice

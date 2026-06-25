@@ -63,6 +63,10 @@ Full diagram and networking details: [docs/architecture.md](docs/architecture.md
 | DET-006 | LSASS Memory Access | T1003.001 | Credential Access | Critical | 🔄 |
 | DET-007 | Office → Child Process Spawn | T1566.001 | Initial Access | Critical | 🔄 |
 
+📑 **[Detection Case Studies report](detections/CASE-STUDIES.md)** — SOC-style write-up of 6 case
+studies (brute force, PowerShell, LSASS/Mimikatz, ransomware, persistence, full kill chain) with
+threat context, detection logic, triage and remediation.
+
 ### MITRE ATT&CK Coverage Map
 
 | Tactic | Techniques Covered |
