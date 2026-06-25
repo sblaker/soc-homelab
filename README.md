@@ -117,12 +117,25 @@ Playbooks in [`atomic-red-team/playbooks/`](atomic-red-team/playbooks/) — each
 
 ## Screenshots
 
-The Wazuh dashboard runs at `https://localhost` (Docker, single-node). To capture fresh
-screenshots from a live deployment into [`screenshots/`](screenshots/), bring the stack up,
-enroll the agents, then run [`take-screenshots.ps1`](take-screenshots.ps1) (overview, per-agent,
-and MITRE ATT&CK coverage views).
+Captured from the live single-node Wazuh deployment (`https://localhost`) with both agents
+enrolled and custom rules loaded.
 
-> Screenshots are environment-specific and are not committed to keep the repo lean.
+### Dashboard Overview
+Active agents and last-24h alert severity breakdown across the lab.
+
+![Wazuh dashboard overview](screenshots/dashboard.png)
+
+### Threat Hunting — MITRE ATT&CK
+Alert-level evolution and the **Top 10 MITRE ATT&CK** techniques observed (Process Injection,
+PowerShell, Command & Scripting, LSASS Memory, OS Credential Dumping) from the simulated attacks.
+
+![Threat hunting and MITRE ATT&CK coverage](screenshots/Threat%20Hunting.png)
+
+### Alert Stream (Discover)
+Raw Sysmon-backed events streaming from `target-windows` into the manager, with custom-rule
+matches highlighted.
+
+![Wazuh alert stream in Discover](screenshots/wazuh%20alerth.png)
 
 ---
 
