@@ -27,6 +27,28 @@ loaded, ready to validate with the linked playbook.
 
 ---
 
+## Live validation log
+
+Custom rules fired on commands executed inside the `target-windows` VM (agent `002`, Windows 10 Pro),
+captured from the Wazuh indexer:
+
+| Time (UTC) | rule.id | Level | Technique | Observed command line |
+|---|---|---|---|---|
+| 2026-06-25 00:43 | `100063` | 12 | T1059.001 | `powershell -nop -w hidden -c exit` |
+| 2026-06-25 00:44 | `100034` | 15 | T1003 | `powershell logonpasswords` (Mimikatz keyword) |
+| 2026-06-25 00:51 | `100030` | 14 | T1490 | `vssadmin delete shadows /all /quiet` |
+| 2026-06-25 00:54 | `100033` | 14 | T1003.001 | `rundll32 comsvcs.dll minidump lsass` |
+
+Two field notes from the exercise:
+- **Rule overlap (tuning)**: the registry Run-key write was caught by Wazuh's built-in rule `92302`
+  before the custom `100022`; in a real deployment `100022` should chain off it (`<if_sid>92302</if_sid>`)
+  rather than duplicate it. A concrete example of *rule precedence* tuning.
+- **The pattern is genuinely flagged**: the host's own Windows Defender blocked launching the
+  LSASS-dump command line until the string was split — first-hand proof that `comsvcs MiniDump lsass`
+  is a recognized credential-dumping indicator.
+
+---
+
 ## Environment & data flow
 
 ```
@@ -126,7 +148,7 @@ execution policy.
 
 ---
 
-## Case Study 3 — LSASS Credential Dumping (Mimikatz & LOLBins) 🧪
+## Case Study 3 — LSASS Credential Dumping (Mimikatz & LOLBins) ✅
 
 | | |
 |---|---|
@@ -151,8 +173,10 @@ Alternative methods: ProcDump `-ma lsass`, or Mimikatz `sekurlsa::logonpasswords
 - `100025` — EID 10 *ProcessAccess* where `targetImage` is `lsass.exe` (catches dumps that never spawn an obvious command).
 - `100034` — EID 1 command line contains Mimikatz module keywords (`sekurlsa::`, `lsadump::`, `privilege::debug`).
 
-**What the analyst would see.** Critical alert (level 14–15) naming the dumping tool and the access
-to LSASS. A `lsass.dmp` artifact in a temp path corroborates exfiltration intent.
+**What the analyst saw (live capture).** Rule **`100033` (level 14)** fired on
+`rundll32 comsvcs.dll minidump lsass` executed in the VM, and rule **`100034` (level 15)** on a
+Mimikatz keyword (`logonpasswords`) — both with the `T1003.001` mapping. A `lsass.dmp` artifact in a
+temp path corroborates exfiltration intent.
 
 **Triage.** Which process accessed LSASS, with what `GrantedAccess` (`0x1010`/`0x1fffff` = read
 memory)? Is it a known EDR/AV (`MsMpEng.exe`) or something unexpected? Was a `.dmp` written?
@@ -164,7 +188,7 @@ memory)? Is it a known EDR/AV (`MsMpEng.exe`) or something unexpected? Was a `.d
 
 ---
 
-## Case Study 4 — Ransomware Behavior 🧪
+## Case Study 4 — Ransomware Behavior ✅
 
 | | |
 |---|---|
@@ -194,8 +218,10 @@ Get-ChildItem C:\RansomLab -File | % { Rename-Item $_.FullName "$($_.FullName).l
 - `100031` — EID 1, `bcdedit` disabling recovery.
 - `100032` — EID 11, files named like ransom notes or with `.locked/.encrypted/...` extensions.
 
-**What the analyst would see.** Two near-simultaneous **critical** alerts (level 14) for recovery
-inhibition, immediately followed by the ransom-note alert — a textbook ransomware timeline.
+**What the analyst saw (live capture).** Rule **`100030` (level 14)** fired on
+`vssadmin delete shadows /all /quiet` executed in the VM, tagged `T1490` — exactly the recovery-
+inhibition step that precedes encryption. In a full run it is immediately followed by the
+ransom-note alert (`100032`), giving a textbook ransomware timeline.
 
 **Triage.** Shadow-copy deletion is *almost never* legitimate on a workstation. Identify the parent
 process and isolate the host **immediately** — encryption typically follows within minutes.
