@@ -62,14 +62,13 @@
     Severity: 12 (High) — persistenza tramite autorun
   ========================================================= -->
   <rule id="100022" level="12">
-    <if_group>sysmon_event_13</if_group>
-    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\(CurrentVersion\\Run|CurrentVersion\\RunOnce|CurrentVersion\\RunOnceEx)</field>
-    <description>Registry Run key modified for persistence: $(win.eventdata.targetObject) by $(win.eventdata.image)</description>
+    <if_sid>92300</if_sid>
+    <description>[T1547.001] Registry Run key persistence: $(win.eventdata.targetObject) set by $(win.eventdata.image)</description>
     <mitre>
       <id>T1547</id>
       <id>T1547.001</id>
     </mitre>
-    <group>persistence,defense_evasion,</group>
+    <group>persistence,</group>
   </rule>
 
   <!-- =========================================================

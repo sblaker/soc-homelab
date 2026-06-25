@@ -1,0 +1,79 @@
+<!-- =============================================================================
+  custom_linux.xml — Regole custom per detection Linux host/kernel
+  ID range: 100007 – 100019
+  Autore: SOC Home Lab
+  MITRE coverage: T1068 (Exploitation for Privilege Escalation),
+                  T1548.003 (Sudo and Sudo Caching)
+
+  Prerequisiti:
+    - auditd installato e attivo sulla VM (target-linux)
+    - Wazuh Agent configurato per leggere /var/log/audit/audit.log
+      (<localfile><log_format>audit</log_format> in ossec.conf)
+    - Regole audit caricate (vedi scripts/setup-copyfail-detection.sh)
+
+  Nota sui field name:
+    Il decoder auditd di Wazuh espone i campi come data.audit.* — nelle regole
+    XML si usa <field name="audit.key">...</field> (senza prefisso data.).
+============================================================================= -->
+
+<group name="custom_linux,audit,">
+
+  <!-- =========================================================
+    REGOLA 100010 — Copy Fail: apertura socket AF_ALG (CVE-2026-31431)
+    Trigger: syscall socket(AF_ALG) tracciata da auditd con la nostra key.
+             Step 1 dell'exploit Copy Fail: stabilisce l'interfaccia verso
+             il sottosistema crypto del kernel (modulo algif_aead).
+    Tecnica: T1068 (Exploitation for Privilege Escalation)
+    Severity: 12 (High) — l'uso di AF_ALG da processi non-crypto e' anomalo.
+
+    NOTA FP: alcuni tool legittimi (cryptsetup, openssl afalg engine) usano
+    AF_ALG. Va correlato con il contesto (utente, processo, sequenza).
+  ========================================================= -->
+  <rule id="100010" level="12">
+    <if_group>audit</if_group>
+    <field name="audit.key">copyfail_afalg</field>
+    <description>[CVE-2026-31431] AF_ALG crypto socket opened (Copy Fail LPE precursor) by $(audit.exe)</description>
+    <mitre>
+      <id>T1068</id>
+    </mitre>
+    <group>privilege_escalation,copy_fail,</group>
+  </rule>
+
+  <!-- =========================================================
+    REGOLA 100011 — Esecuzione di 'su' tracciata (post-exploitation)
+    Trigger: execve di /bin/su tracciato da auditd con la nostra key.
+             Copy Fail corrompe la cache di su/sudo: dopo l'exploit, 'su'
+             viene lanciato per ottenere la shell root.
+    Tecnica: T1548.003 / T1068
+    Severity: 8 (Medium) — da correlare con 100010 nello stesso host.
+  ========================================================= -->
+  <rule id="100011" level="8">
+    <if_group>audit</if_group>
+    <field name="audit.key">copyfail_su</field>
+    <description>[CVE-2026-31431] su executed (possible Copy Fail post-exploitation) by $(audit.exe)</description>
+    <mitre>
+      <id>T1068</id>
+      <id>T1548.003</id>
+    </mitre>
+    <group>privilege_escalation,copy_fail,</group>
+  </rule>
+
+  <!-- =========================================================
+    REGOLA 100012 — Copy Fail: catena completa (correlazione)
+    Trigger: 100011 (su) preceduto da 100010 (AF_ALG) sullo stesso host
+             entro 120s. La sequenza AF_ALG -> su e' la firma comportamentale
+             dell'exploit Copy Fail in azione.
+    Severity: 14 (Critical) — alta confidenza di exploitation attiva.
+  ========================================================= -->
+  <rule id="100012" level="14" frequency="2" timeframe="120">
+    <if_matched_sid>100010</if_matched_sid>
+    <if_sid>100011</if_sid>
+    <description>[CVE-2026-31431] Copy Fail exploitation chain: AF_ALG socket followed by su execution</description>
+    <mitre>
+      <id>T1068</id>
+      <id>T1548.003</id>
+    </mitre>
+    <group>privilege_escalation,copy_fail,</group>
+  </rule>
+
+</group>

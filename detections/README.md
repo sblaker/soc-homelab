@@ -15,16 +15,18 @@ Ogni detection è documentata con: simulazione dell'attacco, alert catturato dal
 | [DET-001](DET-001_ssh-brute-force.md) | SSH Brute Force | T1110.001 | Credential Access | High | ✅ |
 | [DET-002](DET-002_powershell-suspicious.md) | PowerShell Sospetto (host) | T1059.001 | Execution | High | ✅ |
 | DET-003 | Scheduled Task Persistence | T1053.005 | Persistence | High | 🔄 |
-| DET-004 | Registry Run Key Persistence | T1547.001 | Persistence | High | 🔄 |
+| [DET-004](DET-004_registry-run-key.md) | Registry Run Key Persistence | T1547.001 | Persistence | High | ✅ |
 | DET-005 | SMB / PsExec Lateral Movement | T1021.002 | Lateral Movement | High | 🔄 |
 | [DET-006](DET-006_lsass-dumping.md) | LSASS Credential Dumping | T1003.001 | Credential Access | Critical | ✅ |
-| [DET-007](DET-007_ransomware-shadow-deletion.md) | Ransomware: Shadow Copy Deletion | T1490 | Impact | Critical | ✅ |
+| [DET-007](DET-007_ransomware-shadow-deletion.md) | Ransomware: Inhibit System Recovery (vssadmin + bcdedit) | T1490 | Impact | Critical | ✅ |
 | [DET-008](DET-008_powershell-offensive-flags.md) | PowerShell Offensive Flags (VM) | T1059.001 | Execution | High | ✅ |
-| [DET-009](DET-009_mimikatz-keywords.md) | Mimikatz Keywords | T1003.001 | Credential Access | Critical | ✅ |
+| [DET-009](DET-009_mimikatz-keywords.md) | Mimikatz Keywords + binario reale | T1003.001 | Credential Access | Critical | ✅ |
 | DET-010 | Office → Child Process Spawn | T1566.001 | Initial Access | Critical | 🔄 |
+| [DET-011](DET-011_copyfail-cve-2026-31431.md) | Copy Fail: Linux Kernel LPE (CVE-2026-31431) | T1068 | Privilege Escalation | Critical | ✅ |
 
-> **DET validati dal vivo sulla VM** (`target-windows`, agent 002): DET-006, 007, 008, 009 — con JSON
-> reale dell'alert. Vedi [CASE-STUDIES.md](CASE-STUDIES.md) per il quadro d'insieme.
+> **DET validati dal vivo sulla VM**: DET-004, 006, 007, 008, 009 (`target-windows`, agent 002) ·
+> DET-011 (`target-linux`, agent 003) — tutti con JSON reale dell'alert.
+> Vedi [CASE-STUDIES.md](CASE-STUDIES.md) per il quadro d'insieme.
 
 **Legenda**: ✅ Completato · 🔄 In corso · ⬜ Non iniziato
 

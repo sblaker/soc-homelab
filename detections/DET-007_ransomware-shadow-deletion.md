@@ -1,15 +1,19 @@
-# DET-007 — Ransomware: Shadow Copy Deletion (Inhibit System Recovery)
+# DET-007 — Ransomware: Inhibit System Recovery (vssadmin + bcdedit)
 
 ## Sommario
 
-Rileva la **cancellazione delle Volume Shadow Copies** (le copie di ripristino di Windows), cioè il
-passo che **quasi ogni ransomware** esegue **prima di cifrare** per impedire alla vittima di
-recuperare i file. Catturare questo evento dà al SOC una finestra preziosa — di solito **pochi
-minuti** — per isolare l'host *prima* dell'impatto.
+Rileva i **passi di pre-cifratura del ransomware** che distruggono le opzioni di ripristino di
+Windows prima di cifrare i file:
+- **`vssadmin delete shadows /all`** — cancella le Volume Shadow Copies (regola `100030`, level 14)
+- **`bcdedit /set recoveryenabled no`** — disabilita il recovery boot (regola `100031`, level 14)
 
-Detection **validata dal vivo** su `target-windows` (VM Windows 10 Pro, agent 002): `vssadmin.exe`
-ha cancellato tutte le shadow copy in modalità silenziosa, catturato da **Sysmon Event ID 1** e
-rilevato dalla regola custom **`100030` (level 14)**.
+Catturare questi eventi dà al SOC una finestra preziosa — di solito **pochi minuti** — per isolare
+l'host *prima* dell'impatto. Entrambi i comandi sono **LOLBin** (tool Microsoft legittimi usati in
+modo malevolo) e vengono catturati tramite **Sysmon EID 1** (Process Create).
+
+Detection **validata due volte** su `target-windows` (VM Windows 10 Pro, agent 002):
+- **Alert 1** — `vssadmin delete shadows /all /quiet` → regola `100030` (2026-06-25 00:51)
+- **Alert 2** — `bcdedit /set {default} recoveryenabled no` → regola `100031` (2026-06-25 12:27)
 
 ---
 
@@ -181,6 +185,112 @@ segue tipicamente in pochi minuti. **Isola l'host immediatamente.**
   detection ad alta priorità qui può salvare l'organizzazione.
 - Anche qui vale il **living-off-the-land**: `vssadmin` è un tool Microsoft — si rileva il
   *comportamento* (`delete shadows /all`), non un binario malevolo.
+
+---
+
+---
+
+## Detection 2 — bcdedit Boot Recovery Disabled (rule 100031)
+
+### Come è stato simulato
+
+```cmd
+bcdedit /set {default} recoveryenabled no
+bcdedit /set {default} bootstatuspolicy ignoreallfailures
+```
+
+> Disabilita il menu di ripristino al boot (F8) e ignora i crash. Ryuk, Conti e LockBit usano
+> questa coppia di comandi per impedire il recovery manuale da supporto esterno. Il comando può
+> essere eseguito anche con `integrityLevel: Medium` se UAC non è configurato in modo restrittivo —
+> Sysmon logga EID 1 indipendentemente dall'esito.
+
+**Cleanup**:
+```cmd
+bcdedit /set {default} recoveryenabled yes
+bcdedit /set {default} bootstatuspolicy displayallfailures
+```
+
+### Alert generato da Wazuh
+
+```json
+{
+  "timestamp": "2026-06-25T12:27:54.279+0000",
+  "rule": {
+    "id": "100031",
+    "level": 14,
+    "description": "[T1490] Windows boot recovery disabled via bcdedit (ransomware): bcdedit  /set {default} recoveryenabled no",
+    "mitre": {
+      "id": ["T1490"],
+      "tactic": ["Impact"],
+      "technique": ["Inhibit System Recovery"]
+    },
+    "groups": ["custom_windows", "sysmon", "impact", "ransomware"],
+    "firedtimes": 4
+  },
+  "agent": { "id": "002", "name": "target-windows", "ip": "192.168.56.103" },
+  "data": {
+    "win": {
+      "system": { "eventID": "1", "channel": "Microsoft-Windows-Sysmon/Operational", "eventRecordID": "6457" },
+      "eventdata": {
+        "image": "C:\\Windows\\System32\\bcdedit.exe",
+        "originalFileName": "bcdedit.exe",
+        "description": "Boot Configuration Data Editor",
+        "company": "Microsoft Corporation",
+        "commandLine": "bcdedit  /set {default} recoveryenabled no",
+        "parentImage": "C:\\Windows\\System32\\cmd.exe",
+        "parentCommandLine": "cmd.exe /c run-bcdedit.bat",
+        "user": "TARGET-WINDOWS\\labuser",
+        "integrityLevel": "Medium",
+        "hashes": "MD5=3B648A32ED546F44F3E411AA201338D1,SHA256=BDD22EB9CCD52F0DE20CB14FC0F4797177147328D3D512634D9713C33EFD2069,IMPHASH=ED47BFF4333B75903582989F6C229A64"
+      }
+    }
+  }
+}
+```
+
+### Regola Wazuh
+
+**File**: `wazuh/rules/custom_windows.xml` · **Rule ID**: `100031` · **Level**: 14 (Critical)
+
+```xml
+<rule id="100031" level="14">
+  <if_group>sysmon_event1</if_group>
+  <field name="win.eventdata.image" type="pcre2">(?i)bcdedit\.exe</field>
+  <field name="win.eventdata.commandLine" type="pcre2">(?i)(recoveryenabled\s+(no|off)|bootstatuspolicy\s+ignoreallfailures)</field>
+  <description>[T1490] Windows boot recovery disabled via bcdedit (ransomware): $(win.eventdata.commandLine)</description>
+  <mitre><id>T1490</id></mitre>
+  <group>impact,ransomware,</group>
+</rule>
+```
+
+### Analisi
+
+| Campo | Valore | Nota |
+|---|---|---|
+| `image` | `bcdedit.exe` | Tool Microsoft nativo — LOLBin |
+| `commandLine` | `bcdedit /set {default} recoveryenabled no` | Disabilita recovery boot |
+| `integrityLevel` | Medium | Comando eseguito senza admin elevato (esito reale incerto, ma EID 1 loggato) |
+| `firedtimes` | 4 | Eseguito più volte nel test |
+
+**Nota `integrityLevel: Medium`**: `bcdedit` per modificare le opzioni di boot normalmente richiede
+admin. Con Medium il comando potrebbe essere fallito — ma Sysmon logga l'EID 1 (creazione del
+processo) indipendentemente dall'esito. In produzione questo è un comportamento atteso: la detection
+cattura anche i **tentativi falliti**, che sono comunque un segnale di attività sospetta.
+
+---
+
+## Catena ransomware T1490 completa
+
+In un attacco reale i due comandi vengono eseguiti in sequenza:
+
+```
+1. vssadmin delete shadows /all /quiet     → 100030 (level 14)
+2. bcdedit /set recoveryenabled no         → 100031 (level 14)
+3. [cifratura dei file]                    → T1486 (non simulato)
+```
+
+La correlazione temporale tra 100030 e 100031 sullo stesso host in pochi secondi è quasi certamente
+un **incidente ransomware in corso** → isola immediatamente.
 
 ---
 
