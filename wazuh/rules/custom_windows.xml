@@ -176,4 +176,88 @@
     <group>persistence,</group>
   </rule>
 
+  <!-- =========================================================
+    REGOLA 100030 — Cancellazione Shadow Copies / backup (ransomware)
+    Trigger: Sysmon EID 1, vssadmin/wmic/wbadmin/diskshadow che cancellano copie shadow
+    Tecnica: T1490 (Inhibit System Recovery)
+    Severity: 14 (Critical) — comportamento classico pre-cifratura ransomware
+  ========================================================= -->
+  <rule id="100030" level="14">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i)(vssadmin|wmic|wbadmin|diskshadow)\.exe</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(delete\s+shadows|shadowcopy\s+delete|delete\s+catalog|delete\s+systemstatebackup|resize\s+shadowstorage)</field>
+    <description>[T1490] Shadow copy/backup deletion (ransomware pre-encryption): $(win.eventdata.commandLine)</description>
+    <mitre>
+      <id>T1490</id>
+    </mitre>
+    <group>impact,ransomware,</group>
+  </rule>
+
+  <!-- =========================================================
+    REGOLA 100031 — Disabilitazione recovery di Windows (bcdedit)
+    Trigger: Sysmon EID 1, bcdedit che disabilita il recovery o ignora i failure
+    Tecnica: T1490 (Inhibit System Recovery)
+    Severity: 14 (Critical)
+  ========================================================= -->
+  <rule id="100031" level="14">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i)bcdedit\.exe</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(recoveryenabled\s+no|bootstatuspolicy\s+ignoreallfailures)</field>
+    <description>[T1490] Windows boot recovery disabled via bcdedit (ransomware): $(win.eventdata.commandLine)</description>
+    <mitre>
+      <id>T1490</id>
+    </mitre>
+    <group>impact,ransomware,</group>
+  </rule>
+
+  <!-- =========================================================
+    REGOLA 100032 — Ransom note / file cifrati (estensioni note)
+    Trigger: Sysmon EID 11, file creato con nome da ransom note o estensione di cifratura
+    Tecnica: T1486 (Data Encrypted for Impact)
+    Severity: 12 (High)
+  ========================================================= -->
+  <rule id="100032" level="12">
+    <if_group>sysmon_event_11</if_group>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)(\\(readme|how[_\s-]?to[_\s-]?decrypt|decrypt[_\s-]?instruction|recover[_\s-]?(your[_\s-]?)?files|_?restore[_\s-]?files|ransom)[^\\]*\.(txt|html|hta)$|\.(locked|encrypted|crypt|crypted|enc|wcry|wncry|ryk|lockbit)$)</field>
+    <description>[T1486] Possible ransomware artifact (note or encrypted file): $(win.eventdata.targetFilename)</description>
+    <mitre>
+      <id>T1486</id>
+    </mitre>
+    <group>impact,ransomware,</group>
+  </rule>
+
+  <!-- =========================================================
+    REGOLA 100033 — Dump della memoria LSASS via comsvcs/procdump/rundll32
+    Trigger: Sysmon EID 1, command line tipica del dumping di LSASS
+    Tecnica: T1003.001 (OS Credential Dumping: LSASS Memory)
+    Severity: 14 (Critical) — complementa 100025 (che usa Sysmon EID 10)
+  ========================================================= -->
+  <rule id="100033" level="14">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(comsvcs\.dll.{0,40}MiniDump|rundll32.{0,40}comsvcs|procdump(64)?(\.exe)?.{0,40}lsass|-ma\s+lsass|lsass\.dmp|dumpert|nanodump)</field>
+    <description>[T1003.001] LSASS memory dump command detected: $(win.eventdata.commandLine)</description>
+    <mitre>
+      <id>T1003</id>
+      <id>T1003.001</id>
+    </mitre>
+    <group>credential_access,</group>
+  </rule>
+
+  <!-- =========================================================
+    REGOLA 100034 — Keyword note di Mimikatz nella command line
+    Trigger: Sysmon EID 1, comandi/moduli tipici di Mimikatz
+    Tecnica: T1003 / T1003.001 (Credential Dumping)
+    Severity: 15 (Critical) — quasi sempre malevolo
+  ========================================================= -->
+  <rule id="100034" level="15">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(sekurlsa::|logonpasswords|lsadump::|kerberos::|crypto::|privilege::debug|mimikatz|invoke-mimikatz|DumpCreds)</field>
+    <description>[T1003] Mimikatz command-line keywords detected: $(win.eventdata.commandLine)</description>
+    <mitre>
+      <id>T1003</id>
+      <id>T1003.001</id>
+    </mitre>
+    <group>credential_access,</group>
+  </rule>
+
 </group>

@@ -74,6 +74,7 @@ Full diagram and networking details: [docs/architecture.md](docs/architecture.md
 | Defense Evasion | T1027, T1218, T1562, T1562.001, T1562.002 |
 | Initial Access | T1566, T1566.001 |
 | Command & Control | T1071, T1071.004, T1568 |
+| Impact | T1490 (Inhibit System Recovery), T1486 (Data Encrypted) |
 
 ---
 
@@ -84,7 +85,7 @@ Rules are in [`wazuh/rules/`](wazuh/rules/) and loaded into the Wazuh Manager vi
 | File | Coverage | Rule IDs |
 |---|---|---|
 | [custom_ssh.xml](wazuh/rules/custom_ssh.xml) | SSH brute force, user enumeration, sudo abuse | 100001–100006 |
-| [custom_windows.xml](wazuh/rules/custom_windows.xml) | Sysmon-based: process injection, registry, file drops, LSASS | 100020–100028 |
+| [custom_windows.xml](wazuh/rules/custom_windows.xml) | Sysmon-based: Office spawn, PowerShell, registry, LSASS dumping (Mimikatz), ransomware (T1490/T1486) | 100020–100034 |
 | [custom_mitre_mapped.xml](wazuh/rules/custom_mitre_mapped.xml) | Full MITRE tag coverage: T1110, T1059, T1053, T1547, T1021, T1562 | 100060–100096 |
 
 ---
@@ -100,6 +101,10 @@ Playbooks in [`atomic-red-team/playbooks/`](atomic-red-team/playbooks/) — each
 | [T1053-005 Scheduled Task](atomic-red-team/playbooks/T1053-005_scheduled-task.md) | T1053.005 | Windows |
 | [T1547-001 Registry Run Key](atomic-red-team/playbooks/T1547-001_registry-run-key.md) | T1547.001 | Windows |
 | [T1021-002 SMB/PsExec](atomic-red-team/playbooks/T1021-002_smb-psexec.md) | T1021.002 | Windows |
+| [T1003-001 LSASS Dumping (Mimikatz)](atomic-red-team/playbooks/T1003-001_lsass-dumping.md) | T1003.001 | Windows |
+| [T1490 Ransomware Behavior](atomic-red-team/playbooks/T1490_ransomware-behavior.md) | T1490 · T1486 | Windows |
+| [Atomic Red Team (framework)](atomic-red-team/playbooks/ATOMIC-RED-TEAM_setup.md) | many | Win/Linux |
+| [Full Attack Chain (kill chain)](atomic-red-team/playbooks/ATTACK-CHAIN_full-intrusion.md) | 7 tactics | Windows |
 
 ---
 
