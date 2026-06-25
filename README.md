@@ -61,7 +61,10 @@ Full diagram and networking details: [docs/architecture.md](docs/architecture.md
 | DET-004 | Registry Run Key Persistence | T1547.001 | Persistence | High | 🔄 |
 | DET-005 | SMB / PsExec Lateral Movement | T1021.002 | Lateral Movement | High | 🔄 |
 | [DET-006](detections/DET-006_lsass-dumping.md) | LSASS Credential Dumping | T1003.001 | Credential Access | Critical | ✅ |
-| DET-007 | Office → Child Process Spawn | T1566.001 | Initial Access | Critical | 🔄 |
+| [DET-007](detections/DET-007_ransomware-shadow-deletion.md) | Ransomware: Shadow Copy Deletion | T1490 | Impact | Critical | ✅ |
+| [DET-008](detections/DET-008_powershell-offensive-flags.md) | PowerShell Offensive Flags (VM) | T1059.001 | Execution | High | ✅ |
+| [DET-009](detections/DET-009_mimikatz-keywords.md) | Mimikatz Keywords | T1003.001 | Credential Access | Critical | ✅ |
+| DET-010 | Office → Child Process Spawn | T1566.001 | Initial Access | Critical | 🔄 |
 
 📑 **[Detection Case Studies report](detections/CASE-STUDIES.md)** — SOC-style write-up of 6 case
 studies (brute force, PowerShell, LSASS/Mimikatz, ransomware, persistence, full kill chain) with
