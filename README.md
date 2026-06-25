@@ -12,6 +12,30 @@ Built as a portfolio piece targeting Blue Team / Cybersecurity Analyst roles.
 
 ---
 
+## Screenshots
+
+Captured from the live single-node Wazuh deployment (`https://localhost`) with both agents
+enrolled and custom rules loaded.
+
+### Dashboard Overview
+Active agents and last-24h alert severity breakdown across the lab.
+
+![Wazuh dashboard overview](screenshots/dashboard.png)
+
+### Threat Hunting — MITRE ATT&CK
+Alert-level evolution and the **Top 10 MITRE ATT&CK** techniques observed (Process Injection,
+PowerShell, Command & Scripting, LSASS Memory, OS Credential Dumping) from the simulated attacks.
+
+![Threat hunting and MITRE ATT&CK coverage](screenshots/Threat%20Hunting.png)
+
+### Alert Stream (Discover)
+Raw Sysmon-backed events streaming from `target-windows` into the manager, with custom-rule
+matches highlighted.
+
+![Wazuh alert stream in Discover](screenshots/wazuh%20alerth.png)
+
+---
+
 ## Architecture
 
 ```
@@ -112,30 +136,6 @@ Playbooks in [`atomic-red-team/playbooks/`](atomic-red-team/playbooks/) — each
 | [T1490 Ransomware Behavior](atomic-red-team/playbooks/T1490_ransomware-behavior.md) | T1490 · T1486 | Windows |
 | [Atomic Red Team (framework)](atomic-red-team/playbooks/ATOMIC-RED-TEAM_setup.md) | many | Win/Linux |
 | [Full Attack Chain (kill chain)](atomic-red-team/playbooks/ATTACK-CHAIN_full-intrusion.md) | 7 tactics | Windows |
-
----
-
-## Screenshots
-
-Captured from the live single-node Wazuh deployment (`https://localhost`) with both agents
-enrolled and custom rules loaded.
-
-### Dashboard Overview
-Active agents and last-24h alert severity breakdown across the lab.
-
-![Wazuh dashboard overview](screenshots/dashboard.png)
-
-### Threat Hunting — MITRE ATT&CK
-Alert-level evolution and the **Top 10 MITRE ATT&CK** techniques observed (Process Injection,
-PowerShell, Command & Scripting, LSASS Memory, OS Credential Dumping) from the simulated attacks.
-
-![Threat hunting and MITRE ATT&CK coverage](screenshots/Threat%20Hunting.png)
-
-### Alert Stream (Discover)
-Raw Sysmon-backed events streaming from `target-windows` into the manager, with custom-rule
-matches highlighted.
-
-![Wazuh alert stream in Discover](screenshots/wazuh%20alerth.png)
 
 ---
 
