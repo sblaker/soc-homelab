@@ -62,7 +62,7 @@
     Severity: 12 (High) — persistenza tramite autorun
   ========================================================= -->
   <rule id="100022" level="12">
-    <if_group>sysmon_event13</if_group>
+    <if_group>sysmon_event_13</if_group>
     <field name="win.eventdata.targetObject" type="pcre2">(?i)\\(CurrentVersion\\Run|CurrentVersion\\RunOnce|CurrentVersion\\RunOnceEx)</field>
     <description>Registry Run key modified for persistence: $(win.eventdata.targetObject) by $(win.eventdata.image)</description>
     <mitre>
@@ -79,7 +79,7 @@
     Severity: 10 (High)
   ========================================================= -->
   <rule id="100023" level="10">
-    <if_group>sysmon_event11</if_group>
+    <if_group>sysmon_event_11</if_group>
     <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\(Temp|AppData\\Roaming|AppData\\Local\\Temp|ProgramData)\\.*\.(exe|dll|bat|ps1|vbs|js|hta|cmd)</field>
     <description>Executable file created in suspicious path: $(win.eventdata.targetFilename)</description>
     <mitre>
@@ -114,7 +114,7 @@
     Severity: 14 (Critical) — quasi sempre credential dumping
   ========================================================= -->
   <rule id="100025" level="14">
-    <if_group>sysmon_event10</if_group>
+    <if_group>sysmon_event_10</if_group>
     <field name="win.eventdata.targetImage" type="pcre2">(?i)lsass\.exe</field>
     <description>Potential credential dumping: process $(win.eventdata.sourceImage) accessed LSASS memory</description>
     <mitre>
@@ -149,7 +149,7 @@
     Severity: 8 (Medium) — richiede analisi contestuale
   ========================================================= -->
   <rule id="100027" level="8">
-    <if_group>sysmon_event22</if_group>
+    <if_group>sysmon_event_22</if_group>
     <field name="win.eventdata.queryName" type="pcre2">(?i)[a-z0-9]{20,}\.(com|net|org|xyz|top|cc|pw)</field>
     <description>DNS query to potentially DGA-generated domain: $(win.eventdata.queryName) from $(win.eventdata.image)</description>
     <mitre>
@@ -166,7 +166,7 @@
     Severity: 10 (High)
   ========================================================= -->
   <rule id="100028" level="10">
-    <if_group>sysmon_event11</if_group>
+    <if_group>sysmon_event_11</if_group>
     <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\(Start Menu\\Programs\\Startup|ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup)\\</field>
     <description>File created in Startup folder for persistence: $(win.eventdata.targetFilename)</description>
     <mitre>

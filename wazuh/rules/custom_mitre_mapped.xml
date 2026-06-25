@@ -138,7 +138,7 @@
 
   <!-- Registro Run key modificato -->
   <rule id="100080" level="12">
-    <if_group>sysmon_event13</if_group>
+    <if_group>sysmon_event_13</if_group>
     <field name="win.eventdata.targetObject" type="pcre2">(?i)\\(CurrentVersion\\Run|CurrentVersion\\RunOnce)</field>
     <description>[T1547.001] Registry Run key modified: $(win.eventdata.targetObject)</description>
     <mitre>
@@ -150,7 +150,7 @@
 
   <!-- File creato in cartella Startup -->
   <rule id="100081" level="10">
-    <if_group>sysmon_event11</if_group>
+    <if_group>sysmon_event_11</if_group>
     <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\Programs\\Startup\\</field>
     <description>[T1547.001] File dropped in Startup folder: $(win.eventdata.targetFilename)</description>
     <mitre>

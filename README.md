@@ -43,7 +43,7 @@ Full diagram and networking details: [docs/architecture.md](docs/architecture.md
 |---|---|---|
 | SIEM | **Wazuh 4.9** | Docker Compose, single-node |
 | Linux target | Ubuntu Server 22.04 | CLI only, Wazuh Agent |
-| Windows target | Windows 10 Evaluation | Wazuh Agent + Sysmon (SwiftOnSecurity) |
+| Windows target | Windows 10 Pro (VirtualBox VM) | Wazuh Agent + Sysmon (SwiftOnSecurity), unattended-provisioned |
 | Attack simulation | **Atomic Red Team** | MITRE-mapped test cases |
 | Detection rules | Custom Wazuh XML | ID range 100001–100099 |
 | Endpoint telemetry | **Sysmon** | Event ID 1, 3, 7, 11, 13, 22 |
@@ -105,15 +105,12 @@ Playbooks in [`atomic-red-team/playbooks/`](atomic-red-team/playbooks/) — each
 
 ## Screenshots
 
-| Dashboard Overview | Agent: target-linux |
-|---|---|
-| ![Wazuh dashboard overview](screenshots/dashboard-overview.png) | ![Agent target-linux](screenshots/agent-target-linux.png) |
+The Wazuh dashboard runs at `https://localhost` (Docker, single-node). To capture fresh
+screenshots from a live deployment into [`screenshots/`](screenshots/), bring the stack up,
+enroll the agents, then run [`take-screenshots.ps1`](take-screenshots.ps1) (overview, per-agent,
+and MITRE ATT&CK coverage views).
 
-| Agent: target-windows | MITRE ATT&CK Coverage |
-|---|---|
-| ![Agent target-windows](screenshots/agent-target-windows.png) | ![MITRE coverage](screenshots/mitre-coverage.png) |
-
-> Screenshots captured from a live Wazuh 4.9.2 deployment running on Docker (single-node).
+> Screenshots are environment-specific and are not committed to keep the repo lean.
 
 ---
 
@@ -144,9 +141,10 @@ Guide: [docs/docker-setup.md](docs/docker-setup.md)
 **2 — Create VMs (VirtualBox)**
 
 - `target-linux`: Ubuntu Server 22.04, 1.5 GB RAM, NAT + Host-only adapter
-- `target-windows`: Windows 10 Eval, 3 GB RAM, NAT + Host-only adapter
+- `target-windows`: Windows 10, 3 GB RAM, NAT + Host-only adapter
 
-Guide: [docs/vm-setup.md](docs/vm-setup.md)
+The Windows VM can be built **fully unattended** (OS + Agent + Sysmon, zero clicks) — see
+[Windows VM automation](#windows-vm-automation). Manual guide: [docs/vm-setup.md](docs/vm-setup.md)
 
 **3 — Enroll Wazuh Agents**
 
@@ -190,6 +188,42 @@ Then check Wazuh Dashboard: **Security Events** → filter `rule.id: 100001`
 
 ---
 
+## Windows VM automation
+
+Building the Windows endpoint by hand (download ISO, click through Setup, install the agent and
+Sysmon) is slow and not reproducible. This lab automates it end-to-end with VirtualBox 7's native
+unattended-install support — **one command, zero clicks**:
+
+```powershell
+# Fetch an official Windows 10 ISO URL (via Fido), then:
+.\scripts\install-target-windows-unattended.ps1 `
+  -IsoPath "C:\ISOs\Win10_x64.iso" -ProvisionAgent
+```
+
+What it does, unattended and headless:
+
+1. Creates the `target-windows` VM (3 GB RAM, 2 vCPU, NAT + host-only `192.168.56.x`).
+2. Installs Windows 10 Pro — VirtualBox generates the answer file (partitions, EULA, local
+   account `labuser`, hostname, OOBE).
+3. Runs a **post-install command as `SYSTEM`** (no UAC, no GUI automation) that waits for
+   networking, then installs **Wazuh Agent** (enrolled to the manager as `target-windows`) and
+   **Sysmon** (SwiftOnSecurity config), and wires the Sysmon channel into `ossec.conf`.
+
+The agent comes up Active and streams Sysmon telemetry to the manager. Scripts:
+
+| Script | Purpose |
+|---|---|
+| [scripts/create-target-windows-vm.ps1](scripts/create-target-windows-vm.ps1) | Create the VM shell (manual OS install) |
+| [scripts/install-target-windows-unattended.ps1](scripts/install-target-windows-unattended.ps1) | Unattended OS install + optional agent/Sysmon provisioning |
+| [scripts/_guest-provision-wazuh-sysmon.ps1](scripts/_guest-provision-wazuh-sysmon.ps1) | In-guest Agent + Sysmon install (reference) |
+
+> **Note on agent naming**: only one agent may hold a given name on the manager. If a previous
+> host-based agent named `target-windows` is still active, the VM's enrollment is rejected
+> (`Duplicate name … rejecting enrollment`). Stop/remove the old agent (or rename one) so the VM
+> can register.
+
+---
+
 ## Repository Structure
 
 ```
@@ -200,13 +234,21 @@ soc-homelab/
 │   ├── vm-setup.md
 │   ├── agents-setup.md
 │   └── sysmon-setup.md
-├── wazuh/
+├── wazuh/                        # Self-contained: no need to clone wazuh-docker
 │   ├── docker-compose.yml        # Wazuh 4.9 single-node + custom rules mount
+│   ├── generate-indexer-certs.yml
+│   ├── config/                   # Non-secret config (certs generated locally)
+│   │   ├── certs.yml
+│   │   ├── wazuh_cluster/wazuh_manager.conf   # adds <rule_dir> for custom rules
+│   │   ├── wazuh_indexer/
+│   │   └── wazuh_dashboard/
 │   ├── rules/
 │   │   ├── custom_ssh.xml        # SSH detection rules
 │   │   ├── custom_windows.xml    # Sysmon-based Windows rules
 │   │   └── custom_mitre_mapped.xml
 │   └── decoders/                 # Custom decoders (if needed)
+├── scripts/
+│   └── create-target-windows-vm.ps1   # VirtualBox provisioning for target-windows
 ├── sysmon/
 │   └── sysmon-config.xml         # SwiftOnSecurity config (add manually)
 ├── atomic-red-team/
@@ -268,12 +310,15 @@ Real alerts captured during attack simulations — JSON in [`detections/`](detec
 
 ## Lab Results
 
-Both agents active and reporting at time of capture:
-
-| Agent ID | Name | Platform | IP | Status | Simulations Run |
+| Agent | Name | Platform | Network | Status | Telemetry |
 |---|---|---|---|---|---|
-| 001 | target-linux | Ubuntu Server 22.04 | `192.168.56.101` | ✅ Active | SSH Brute Force (T1110.001) |
-| 002 | target-windows | Windows 11 + Sysmon v15.21 | `127.0.0.1` | ✅ Active | PowerShell Suspicious (T1059.001) |
+| 001 | target-linux | Ubuntu Server 22.04 (VirtualBox VM) | host-only `192.168.56.x` | ✅ Active | auth.log → SSH Brute Force (T1110.001) |
+| 002 | target-windows | **Windows 10 Pro (VirtualBox VM)** | host-only `192.168.56.x` | ✅ Active | **Sysmon EID 1** → Process Create, custom rules loaded |
+
+> The Windows endpoint is a real VirtualBox VM, provisioned **fully unattended** (OS install +
+> Wazuh Agent + Sysmon) via the scripts in [`scripts/`](scripts/) — see
+> [Windows VM automation](#windows-vm-automation). Agent `002` reports Windows 10 Pro and streams
+> live Sysmon telemetry to the manager, where the custom detection ruleset is applied.
 
 ---
 

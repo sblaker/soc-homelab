@@ -3,4 +3,5 @@
 *.xml text eol=lf
 *.md  text eol=lf
 *.yml text eol=lf
+*.sh  text eol=lf
 *.gitkeep text eol=lf

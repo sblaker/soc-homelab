@@ -68,3 +68,6 @@ wazuh/wazuh-docker-4.9.2/
 # Script temporanei di setup
 publish-github.ps1
 take-screenshots.ps1
+
+# Documentazione interna / appunti personali (non pubblicare)
+GUIDA-COMPLETA-PROGETTO.md

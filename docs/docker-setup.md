@@ -34,22 +34,29 @@ Clicca **Apply & Restart**.
 
 ---
 
-## 3. Clone del docker-compose ufficiale Wazuh
+## 3. Lo stack del lab è già pronto (autonomo)
 
-Wazuh fornisce un repository ufficiale con il `docker-compose.yml` già configurato.
+**Non serve clonare il repository ufficiale di Wazuh per avviare il lab.** La cartella
+[`wazuh/`](../wazuh/) di questa repo è già autosufficiente:
 
-```powershell
-# Scegli una cartella di lavoro, es. Desktop
-cd C:\Users\<TuoUtente>\Desktop\stuff\pi-guard
-
-# Clona il repository Docker ufficiale di Wazuh
-git clone https://github.com/wazuh/wazuh-docker.git --branch v4.9.2 --depth 1
+```
+wazuh/
+├── docker-compose.yml          # stack Wazuh 4.9.2 single-node + mount regole custom
+├── generate-indexer-certs.yml  # generatore dei certificati SSL
+├── config/                     # config non-segreti (manager, indexer, dashboard, certs.yml)
+│   └── wazuh_indexer_ssl_certs/   # qui finiscono i certificati generati (NON versionati)
+└── rules/                      # le regole custom del lab
 ```
 
-> Source ufficiale: [https://github.com/wazuh/wazuh-docker](https://github.com/wazuh/wazuh-docker)  
-> Usa il tag corrispondente alla versione che vuoi deployare (es. `v4.9.2`). Controlla i [release](https://github.com/wazuh/wazuh-docker/releases) per la versione più recente stabile.
+`wazuh/docker-compose.yml` è basato sul deployment **single-node ufficiale** di Wazuh, con due
+aggiunte del lab:
+1. il **volume mount delle regole custom** (`./rules/` → `/var/ossec/etc/rules/custom_lab/`);
+2. la riga `<rule_dir>etc/rules/custom_lab</rule_dir>` in `config/wazuh_cluster/wazuh_manager.conf`
+   che fa **caricare davvero** quelle regole (senza, non verrebbero lette: `<rule_dir>` non è ricorsivo).
 
-Il file `docker-compose.yml` che usiamo nel lab (`wazuh/docker-compose.yml` in questa repo) è basato su quello ufficiale con l'aggiunta dei **volume mount per le regole custom** — vedi [Step 3](../wazuh/docker-compose.yml).
+> Source ufficiale di riferimento: [https://github.com/wazuh/wazuh-docker](https://github.com/wazuh/wazuh-docker)
+> (tag `v4.9.2`). I file `config/` di questo lab provengono da lì; clonarlo è utile solo come
+> riferimento o per aggiornare a una versione più recente.
 
 ---
 

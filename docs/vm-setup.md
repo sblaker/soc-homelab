@@ -1,5 +1,20 @@
 # Setup VirtualBox + VM target
 
+> **Scorciatoia automatica (Windows)**: la VM `target-windows` può essere creata e installata
+> **in automatico** (OS + Wazuh Agent + Sysmon, zero clic) con lo script
+> [`scripts/install-target-windows-unattended.ps1`](../scripts/install-target-windows-unattended.ps1):
+>
+> ```powershell
+> .\scripts\install-target-windows-unattended.ps1 -IsoPath "C:\ISOs\Win10_x64.iso" -ProvisionAgent
+> ```
+>
+> Usa il supporto unattended nativo di VirtualBox 7 (genera lui il file di risposta) e un comando
+> di post-install che gira come SYSTEM per installare e arruolare l'agente. Vedi la sezione
+> "Windows VM automation" nel [README](../README.md). La guida manuale qui sotto resta valida per
+> chi preferisce il controllo passo-passo o per la VM Linux.
+
+---
+
 ## 1. Download dei software necessari
 
 | Software | URL | Note |

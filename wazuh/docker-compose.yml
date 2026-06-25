@@ -1,15 +1,22 @@
 # =============================================================================
-# Wazuh Docker — Single-Node Deployment
+# Wazuh Docker — Single-Node Deployment (SOC Home Lab)
 # Source: https://github.com/wazuh/wazuh-docker (tag v4.9.2)
 # Docs:   https://documentation.wazuh.com/current/deployment-options/docker/
 #
-# MODIFICHE rispetto all'originale:
-#   - Aggiunto volume mount delle regole custom dal repo locale
-#     (sezione "# [LAB CUSTOM]" nel service wazuh.manager)
+# Questo stack e' AUTONOMO: i file di config non-segreti vivono in ./config/
+# (copiati dal single-node ufficiale) e i certificati si generano in locale.
+# Non serve clonare il repo ufficiale per avviarlo.
 #
-# SETUP INIZIALE (una tantum):
+# MODIFICHE rispetto all'originale:
+#   - Volume mount delle regole custom dal repo locale (sezione "# [LAB CUSTOM]")
+#   - Le regole vengono caricate grazie a <rule_dir>etc/rules/custom_lab</rule_dir>
+#     aggiunto in ./config/wazuh_cluster/wazuh_manager.conf (riga indispensabile:
+#     <rule_dir> NON e' ricorsivo, quindi senza non si caricherebbero).
+#
+# SETUP INIZIALE (una tantum), da questa cartella (wazuh/):
 #   docker compose -f generate-indexer-certs.yml run --rm generator
 #   docker compose up -d
+#   # Dashboard -> https://localhost  (admin / SecretPassword)
 # =============================================================================
 
 services:
@@ -60,6 +67,9 @@ services:
       # [LAB CUSTOM] Inietta le regole custom dal repo locale nel Manager
       # Path nel container: /var/ossec/etc/rules/ (directory standard per regole custom)
       - ./rules/:/var/ossec/etc/rules/custom_lab/
+      # [LAB CUSTOM] Script di init eseguiti dall'immagine prima di avviare i servizi
+      # (fix ar.conf mancante al primo avvio su volume vuoto — vedi 00-init-shared.sh)
+      - ./config/entrypoint-scripts/:/entrypoint-scripts/
 
   wazuh.indexer:
     image: wazuh/wazuh-indexer:4.9.2

@@ -71,6 +71,18 @@ Verifica che `<address>` punti a `192.168.56.1`:
 
 ## Agente su `target-windows`
 
+> **Automazione**: se hai creato la VM con
+> [`scripts/install-target-windows-unattended.ps1 -ProvisionAgent`](../scripts/install-target-windows-unattended.ps1),
+> l'agente e Sysmon sono **già installati e arruolati** (come SYSTEM, a fine setup): puoi saltare
+> i passi manuali sotto. Verifica solo che l'agente sia `Active` nella Dashboard.
+>
+> **Collisione di nome**: il manager accetta un solo agente con un dato nome. Se un vecchio agente
+> `target-windows` (es. installato sull'host) è ancora attivo, l'enrollment della VM viene
+> respinto (`Duplicate name 'target-windows', rejecting enrollment`). Ferma/rimuovi il vecchio
+> agente, oppure rimuovilo dal manager con `manage_agents -r <id>`, così la VM può registrarsi.
+
+### Procedura manuale
+
 ### 1. Download MSI
 
 Dalla Dashboard Wazuh: **Agents → Deploy new agent → Windows** → copia il comando PowerShell generato automaticamente con il tuo Manager IP.
