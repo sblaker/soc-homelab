@@ -17,7 +17,7 @@ Ogni detection è documentata con: simulazione dell'attacco, alert catturato dal
 | DET-003 | Scheduled Task Persistence | T1053.005 | Persistence | High | 🔄 |
 | DET-004 | Registry Run Key Persistence | T1547.001 | Persistence | High | 🔄 |
 | DET-005 | SMB / PsExec Lateral Movement | T1021.002 | Lateral Movement | High | 🔄 |
-| DET-006 | LSASS Memory Access | T1003.001 | Credential Access | Critical | 🔄 |
+| [DET-006](DET-006_lsass-dumping.md) | LSASS Credential Dumping | T1003.001 | Credential Access | Critical | ✅ |
 | DET-007 | Office → Child Process Spawn | T1566.001 | Initial Access | Critical | 🔄 |
 
 **Legenda**: ✅ Completato · 🔄 In corso · ⬜ Non iniziato
